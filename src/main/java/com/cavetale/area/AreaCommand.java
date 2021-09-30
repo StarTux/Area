@@ -199,7 +199,6 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
     }
 
     List<String> fileAreaCompleter(CommandContext context, CommandNode node, String[] args) {
-        System.out.println("complete " + args.length + " " + context.player);
         if (args.length == 0) return null;
         if (context.player == null) return null;
         String arg = args[args.length - 1];
