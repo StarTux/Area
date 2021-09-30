@@ -1,0 +1,27 @@
+main: com.cavetale.area.AreaPlugin
+
+name: Area
+version: 0.1
+description: Simple area marker plugin
+api-version: 1.17
+
+author: StarTux
+website: https://github.com/StarTux/Area
+
+depend: [Core, WorldEdit]
+softdepend: []
+
+commands:
+
+  area:
+    aliases: []
+    description: Area Command
+    permission: area.area
+    usage: |-
+      /area
+
+permissions:
+
+  area.area:
+    description: Use /area
+    default: op
