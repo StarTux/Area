@@ -47,7 +47,9 @@ public final class Cuboid {
     @Override
     public String toString() {
         return (name != null ? name + " " : "")
-            + "(" + min + "|" + max + ")";
+            + (min.equals(max)
+               ? "(" + min + ")"
+               : "(" + min + "|" + max + ")");
     }
 
     public int getSizeX() {

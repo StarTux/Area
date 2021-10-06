@@ -16,8 +16,10 @@ import java.util.stream.Collectors;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
+import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
 
 public final class AreaCommand extends AbstractCommand<AreaPlugin> {
     protected AreaCommand(final AreaPlugin plugin) {
@@ -46,6 +48,12 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
             .description("Highlight areas")
             .completer(this::fileAreaCompleter)
             .playerCaller(this::highlight);
+        rootNode.addChild("teleport")
+            .alias("tp")
+            .arguments("<file> <name> <index>")
+            .description("Teleport to area")
+            .completer(this::fileAreaCompleter)
+            .playerCaller(this::teleport);
     }
 
     boolean add(Player player, String[] args) {
@@ -188,6 +196,37 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
         }
         areasFile.save(world, fileArg);
         player.sendMessage("Cuboid removed: " + world.getName() + "/" + fileArg + "/" + nameArg
+                           + "[" + index + "]: " + cuboid);
+        return true;
+    }
+
+    boolean teleport(Player player, String[] args) {
+        if (args.length != 3) return false;
+        World world = player.getWorld();
+        String fileArg = args[0];
+        String nameArg = args[1];
+        String indexArg = args[2];
+        int index;
+        try {
+            index = Integer.parseInt(indexArg);
+        } catch (NumberFormatException nfe) {
+            throw new CommandWarn("Number expected: " + indexArg);
+        }
+        AreasFile areasFile = AreasFile.load(world, fileArg);
+        if (areasFile == null) {
+            throw new CommandWarn("Areas file not found: " + fileArg);
+        }
+        List<Cuboid> areas = areasFile.areas.get(nameArg);
+        if (areas == null) {
+            throw new CommandWarn("Areas list not found: " + nameArg);
+        }
+        if (index < 0 || index >= areas.size()) {
+            throw new CommandWarn("Index out of bouns: " + index + "/" + areas.size());
+        }
+        Cuboid cuboid = areas.get(index);
+        Location location = cuboid.getCenter().toLocation(world);
+        player.teleport(location, TeleportCause.COMMAND);
+        player.sendMessage("Teleported to cuboid: " + world.getName() + "/" + fileArg + "/" + nameArg
                            + "[" + index + "]: " + cuboid);
         return true;
     }
