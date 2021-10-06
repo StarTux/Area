@@ -1,7 +1,9 @@
 package com.cavetale.area.struct;
 
+import com.cavetale.core.util.Json;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
@@ -17,13 +19,14 @@ public final class Cuboid {
     public final Vec3i min;
     public final Vec3i max;
     public final String name;
+    public final Map<String, Object> raw;
 
     public Cuboid(final Vec3i min, final Vec3i max) {
-        this(min, max, (String) null);
+        this(min, max, (String) null, null);
     }
 
     public Cuboid named(String newName) {
-        return new Cuboid(min, max, newName);
+        return new Cuboid(min, max, newName, null);
     }
 
     public boolean contains(int x, int y, int z) {
@@ -49,7 +52,10 @@ public final class Cuboid {
         return (name != null ? name + " " : "")
             + (min.equals(max)
                ? "(" + min + ")"
-               : "(" + min + "|" + max + ")");
+               : "(" + min + "|" + max + ")")
+            + (raw != null
+               ? Json.serialize(raw)
+               : "");
     }
 
     public int getSizeX() {
