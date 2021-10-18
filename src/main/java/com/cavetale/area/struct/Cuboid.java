@@ -25,8 +25,16 @@ public final class Cuboid {
         this(min, max, (String) null, null);
     }
 
-    public Cuboid named(String newName) {
-        return new Cuboid(min, max, newName, null);
+    public Cuboid withName(String newName) {
+        return new Cuboid(min, max, newName, raw);
+    }
+
+    public Cuboid withArea(Cuboid other) {
+        return new Cuboid(other.min, other.max, name, raw);
+    }
+
+    public Cuboid withRaw(Map<String, Object> newRaw) {
+        return new Cuboid(min, max, name, newRaw);
     }
 
     public boolean contains(int x, int y, int z) {
