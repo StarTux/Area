@@ -37,6 +37,13 @@ public final class Cuboid {
         return new Cuboid(min, max, name, newRaw);
     }
 
+    public Cuboid outset(int width) {
+        return new Cuboid(new Vec3i(min.x - width, min.y - width, min.z - width),
+                          new Vec3i(max.x + width, max.y + width, max.z + width),
+                          name,
+                          raw);
+    }
+
     public boolean contains(int x, int y, int z) {
         return x >= min.x && x <= max.x
             && y >= min.y && y <= max.y

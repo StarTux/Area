@@ -193,7 +193,9 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
             throw new CommandWarn("Areas not found: " + path);
         }
         player.sendMessage(Component.text("Highlighting " + list.size() + " areas:", NamedTextColor.YELLOW));
+        Location location = player.getLocation();
         for (Cuboid cuboid : list) {
+            if (!cuboid.outset(64).contains(location)) continue;
             cuboid.highlight(world, player);
             player.sendMessage(Component.text("- " + cuboid, NamedTextColor.WHITE));
         }
