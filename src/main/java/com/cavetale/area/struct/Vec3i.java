@@ -5,6 +5,7 @@ import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.util.Vector;
 
 @Value
 public final class Vec3i {
@@ -28,6 +29,10 @@ public final class Vec3i {
 
     public Location toLocation(World world) {
         return toBlock(world).getLocation().add(0.5, 0.0, 0.5);
+    }
+
+    public Vector toVector() {
+        return new Vector(x, y, z);
     }
 
     public BlockFace horizontalBlockFace() {
