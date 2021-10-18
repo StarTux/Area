@@ -80,4 +80,10 @@ public final class Vec3i {
     public Vec3i withY(int newY) {
         return new Vec3i(x, newY, z);
     }
+
+    public int maxDistance(Vec3i other) {
+        return Math.max(Math.abs(x - other.x),
+                        Math.max(Math.abs(y - other.y),
+                                 Math.abs(z - other.z)));
+    }
 }
