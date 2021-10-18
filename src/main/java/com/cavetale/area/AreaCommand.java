@@ -49,6 +49,11 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
             .description("List areas")
             .completer(this::fileAreaCompleter)
             .playerCaller(this::list);
+        rootNode.addChild("here")
+            .arguments("<file>")
+            .description("List areas here")
+            .completer(this::fileAreaCompleter)
+            .playerCaller(this::here);
         rootNode.addChild("highlight")
             .alias("hl")
             .arguments("[file] [name] [subname]")
@@ -136,6 +141,27 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
             for (Cuboid cuboid : list) {
                 player.sendMessage("" + ChatColor.YELLOW + index + ") " + ChatColor.WHITE + cuboid);
                 index += 1;
+            }
+        }
+        return true;
+    }
+
+    protected boolean here(Player player, String[] args) {
+        if (args.length != 1) return false;
+        World world = player.getWorld();
+        String filename = args[0];
+        AreasFile areasFile = AreasFile.load(world, filename);
+        if (areasFile == null) {
+            throw new CommandWarn("File not found: " + world.getName() + "/" + filename);
+        }
+        Location location = player.getLocation();
+        for (Map.Entry<String, List<Cuboid>> entry : areasFile.areas.entrySet()) {
+            String name = entry.getKey();
+            for (Cuboid area : entry.getValue()) {
+                if (area.contains(player.getLocation())) {
+                    player.sendMessage(Component.text("- " + name + ": " + area,
+                                                      NamedTextColor.YELLOW));
+                }
             }
         }
         return true;
