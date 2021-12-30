@@ -11,7 +11,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 /**
- * WorldEdit access. Based on WorldEdit 7.2.0.
+ * WorldEdit access. Based on WorldEdit 7.3.0.
  */
 public final class WorldEdit {
     private WorldEdit() { }
