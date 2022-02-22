@@ -23,6 +23,14 @@ public final class Vec3i {
         return new Vec3i(location.getBlockX(), location.getBlockY(), location.getBlockZ());
     }
 
+    public static Vec3i of(Vector vector) {
+        return new Vec3i(vector.getBlockX(), vector.getBlockY(), vector.getBlockZ());
+    }
+
+    public static Vec3i of(BlockFace blockFace) {
+        return new Vec3i(blockFace.getModX(), blockFace.getModY(), blockFace.getModZ());
+    }
+
     public Block toBlock(World world) {
         return world.getBlockAt(x, y, z);
     }
@@ -41,6 +49,19 @@ public final class Vec3i {
         } else {
             return z > 0 ? BlockFace.SOUTH : BlockFace.NORTH;
         }
+    }
+
+    /**
+     * Try to convert this vector to a BlockFace.
+     */
+    public BlockFace toSingleBlockFace() {
+        if (x > 0) return BlockFace.EAST;
+        if (x < 0) return BlockFace.WEST;
+        if (z > 0) return BlockFace.SOUTH;
+        if (z < 0) return BlockFace.NORTH;
+        if (y > 0) return BlockFace.UP;
+        if (y < 0) return BlockFace.DOWN;
+        return BlockFace.SELF;
     }
 
     public Vec3i add(int dx, int dy, int dz) {
