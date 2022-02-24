@@ -85,6 +85,10 @@ public final class Cuboid {
         return max.z - min.z + 1;
     }
 
+    public Vec3i getSize() {
+        return new Vec3i(getSizeX(), getSizeY(), getSizeZ());
+    }
+
     public int getVolume() {
         return getSizeX() * getSizeY() * getSizeZ();
     }
