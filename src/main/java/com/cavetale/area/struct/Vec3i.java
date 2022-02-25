@@ -35,8 +35,15 @@ public final class Vec3i {
         return world.getBlockAt(x, y, z);
     }
 
+    /**
+     * Create a location at the bottom center of this vector.
+     */
     public Location toLocation(World world) {
         return toBlock(world).getLocation().add(0.5, 0.0, 0.5);
+    }
+
+    public Location toBaseLocation(World world) {
+        return toBlock(world).getLocation();
     }
 
     public Vector toVector() {

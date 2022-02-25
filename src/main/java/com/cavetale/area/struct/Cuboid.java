@@ -44,6 +44,10 @@ public final class Cuboid {
                           raw);
     }
 
+    public Cuboid shift(int x, int y, int z) {
+        return new Cuboid(min.add(x, y, z), max.add(x, y, z), name, raw);
+    }
+
     public boolean contains(int x, int y, int z) {
         return x >= min.x && x <= max.x
             && y >= min.y && y <= max.y
