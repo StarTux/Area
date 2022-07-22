@@ -8,8 +8,8 @@ api-version: 1.17
 author: StarTux
 website: https://github.com/StarTux/Area
 
-depend: [Core, WorldEdit]
-softdepend: []
+depend: [Core]
+softdepend: [WorldEdit]
 
 commands:
 
