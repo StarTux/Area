@@ -11,7 +11,7 @@ import java.util.Objects;
 import org.bukkit.World;
 
 public final class AreasFile {
-    public final Map<String, List<Cuboid>> areas = new HashMap<>();
+    public final Map<String, List<Area>> areas = new HashMap<>();
 
     public static AreasFile load(World world, String fileName) {
         File folder = new File(world.getWorldFolder(), "areas");
@@ -37,24 +37,24 @@ public final class AreasFile {
         Json.save(file, this, true);
     }
 
-    public List<Cuboid> all() {
-        List<Cuboid> result = new ArrayList<>();
-        for (List<Cuboid> it : areas.values()) {
+    public List<Area> all() {
+        List<Area> result = new ArrayList<>();
+        for (List<Area> it : areas.values()) {
             result.addAll(it);
         }
         return result;
     }
 
-    public List<Cuboid> find(String name) {
-        List<Cuboid> result = areas.get(name);
+    public List<Area> find(String name) {
+        List<Area> result = areas.get(name);
         return result != null ? result : List.of();
     }
 
-    public List<Cuboid> find(String name, String subname) {
-        List<Cuboid> list = areas.get(name);
+    public List<Area> find(String name, String subname) {
+        List<Area> list = areas.get(name);
         if (list == null) return List.of();
-        List<Cuboid> result = new ArrayList<>(list.size());
-        for (Cuboid cuboid : list) {
+        List<Area> result = new ArrayList<>(list.size());
+        for (Area cuboid : list) {
             if (Objects.equals(subname, cuboid.name)) {
                 result.add(cuboid);
             }

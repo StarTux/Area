@@ -1,5 +1,7 @@
 package com.cavetale.area.struct;
 
+import com.cavetale.core.struct.Cuboid;
+import com.cavetale.core.struct.Vec3i;
 import com.cavetale.core.util.Json;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,38 +16,38 @@ import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 
 @Value @RequiredArgsConstructor
-public final class Cuboid {
-    public static final Cuboid ZERO = new Cuboid(Vec3i.ZERO, Vec3i.ZERO);
+public final class Area {
+    public static final Area ZERO = new Area(Vec3i.ZERO, Vec3i.ZERO);
     public final Vec3i min;
     public final Vec3i max;
     public final String name;
     public final Map<String, Object> raw;
 
-    public Cuboid(final Vec3i min, final Vec3i max) {
+    public Area(final Vec3i min, final Vec3i max) {
         this(min, max, (String) null, null);
     }
 
-    public Cuboid withName(String newName) {
-        return new Cuboid(min, max, newName, raw);
+    public Area withName(String newName) {
+        return new Area(min, max, newName, raw);
     }
 
-    public Cuboid withArea(Cuboid other) {
-        return new Cuboid(other.min, other.max, name, raw);
+    public Area withArea(Area other) {
+        return new Area(other.min, other.max, name, raw);
     }
 
-    public Cuboid withRaw(Map<String, Object> newRaw) {
-        return new Cuboid(min, max, name, newRaw);
+    public Area withRaw(Map<String, Object> newRaw) {
+        return new Area(min, max, name, newRaw);
     }
 
-    public Cuboid outset(int width) {
-        return new Cuboid(new Vec3i(min.x - width, min.y - width, min.z - width),
+    public Area outset(int width) {
+        return new Area(new Vec3i(min.x - width, min.y - width, min.z - width),
                           new Vec3i(max.x + width, max.y + width, max.z + width),
                           name,
                           raw);
     }
 
-    public Cuboid shift(int x, int y, int z) {
-        return new Cuboid(min.add(x, y, z), max.add(x, y, z), name, raw);
+    public Area shift(int x, int y, int z) {
+        return new Area(min.add(x, y, z), max.add(x, y, z), name, raw);
     }
 
     public boolean contains(int x, int y, int z) {
@@ -166,5 +168,9 @@ public final class Cuboid {
             callback.accept(loc.clone().add(dx, sizeY, 0));
             callback.accept(loc.clone().add(dx, sizeY, sizeZ));
         }
+    }
+
+    public Cuboid toCuboid() {
+        return new Cuboid(min.x, min.y, min.z, max.x, max.y, max.z);
     }
 }

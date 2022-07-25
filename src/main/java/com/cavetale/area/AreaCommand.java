@@ -1,12 +1,12 @@
 package com.cavetale.area;
 
+import com.cavetale.area.struct.Area;
 import com.cavetale.area.struct.AreasFile;
-import com.cavetale.area.struct.Cuboid;
-import com.cavetale.area.worldedit.WorldEdit;
 import com.cavetale.core.command.AbstractCommand;
 import com.cavetale.core.command.CommandContext;
 import com.cavetale.core.command.CommandNode;
 import com.cavetale.core.command.CommandWarn;
+import com.cavetale.core.struct.Cuboid;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -80,7 +80,7 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
         String fileArg = args[0];
         String nameArg = args[1];
         String subnameArg = args.length >= 3 ? args[2] : null;
-        Cuboid cuboid = getSelection(player).withName(subnameArg);
+        Area cuboid = getSelection(player).withName(subnameArg);
         World world = player.getWorld();
         AreasFile areasFile = AreasFile.load(world, fileArg);
         if (areasFile == null) areasFile = new AreasFile();
@@ -113,7 +113,7 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
         }
         if (args.length == 1) {
             List<String> names = new ArrayList<>();
-            for (Map.Entry<String, List<Cuboid>> entry : areasFile.areas.entrySet()) {
+            for (Map.Entry<String, List<Area>> entry : areasFile.areas.entrySet()) {
                 names.add(entry.getKey() + "(" + entry.getValue().size() + ")");
             }
             player.sendMessage(text(fileArg + ": " + names.size() + " area lists: " + String.join(", ", names), YELLOW));
@@ -122,13 +122,13 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
         String nameArg = args[1];
         if (args.length == 2) {
             String path = world.getName() + "/" + fileArg + "/" + nameArg;
-            List<Cuboid> list = areasFile.areas.get(nameArg);
+            List<Area> list = areasFile.areas.get(nameArg);
             if (list == null) {
                 throw new CommandWarn("Area list not found: " + path);
             }
             player.sendMessage(ChatColor.YELLOW + path + ": " + list.size() + " areas");
             int index = 0;
-            for (Cuboid cuboid : list) {
+            for (Area cuboid : list) {
                 player.sendMessage("" + ChatColor.YELLOW + index + ") " + ChatColor.WHITE + cuboid);
                 index += 1;
             }
@@ -137,13 +137,13 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
         String subnameArg = args[2];
         if (args.length == 3) {
             String path = world.getName() + "/" + fileArg + "/" + nameArg + "/" + subnameArg;
-            List<Cuboid> list = areasFile.find(nameArg, subnameArg);
+            List<Area> list = areasFile.find(nameArg, subnameArg);
             if (list.isEmpty()) {
                 throw new CommandWarn("Sublist not found: " + path);
             }
             player.sendMessage(ChatColor.YELLOW + path + ": " + list.size() + " areas");
             int index = 0;
-            for (Cuboid cuboid : list) {
+            for (Area cuboid : list) {
                 player.sendMessage("" + ChatColor.YELLOW + index + ") " + ChatColor.WHITE + cuboid);
                 index += 1;
             }
@@ -160,9 +160,9 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
             throw new CommandWarn("File not found: " + world.getName() + "/" + filename);
         }
         Location location = player.getLocation();
-        for (Map.Entry<String, List<Cuboid>> entry : areasFile.areas.entrySet()) {
+        for (Map.Entry<String, List<Area>> entry : areasFile.areas.entrySet()) {
             String name = entry.getKey();
-            for (Cuboid area : entry.getValue()) {
+            for (Area area : entry.getValue()) {
                 if (area.contains(player.getLocation())) {
                     player.sendMessage(text("- " + name + ": " + area, YELLOW));
                 }
@@ -180,7 +180,7 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
             throw new CommandWarn("No areas file found: " + fileArg);
         }
         final String path;
-        final List<Cuboid> list;
+        final List<Area> list;
         if (args.length == 1) {
             path = fileArg;
             list = areasFile.all();
@@ -198,7 +198,7 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
         }
         player.sendMessage(text("Highlighting " + list.size() + " areas:", YELLOW));
         Location location = player.getLocation();
-        for (Cuboid cuboid : list) {
+        for (Area cuboid : list) {
             if (!cuboid.outset(64).contains(location)) continue;
             cuboid.highlight(world, player);
             player.sendMessage(text("- " + cuboid, WHITE));
@@ -222,28 +222,28 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
         if (areasFile == null) {
             throw new CommandWarn("Areas file not found: " + fileArg);
         }
-        List<Cuboid> areas = areasFile.areas.get(nameArg);
+        List<Area> areas = areasFile.areas.get(nameArg);
         if (areas == null) {
             throw new CommandWarn("Areas list not found: " + nameArg);
         }
         if (index < 0 || index >= areas.size()) {
             throw new CommandWarn("Index out of bounds: " + index + "/" + areas.size());
         }
-        Cuboid cuboid = areas.remove(index);
+        Area cuboid = areas.remove(index);
         if (areas.isEmpty()) {
             areasFile.areas.remove(nameArg);
         }
         areasFile.save(world, fileArg);
-        player.sendMessage("Cuboid removed: " + world.getName() + "/" + fileArg + "/" + nameArg
+        player.sendMessage("Area removed: " + world.getName() + "/" + fileArg + "/" + nameArg
                            + "[" + index + "]: " + cuboid);
         return true;
     }
 
     private boolean redefine(Player player, String[] args) {
         if (args.length != 3) return false;
-        Cuboid selection = getSelection(player);
+        Area selection = getSelection(player);
         IndexedSearch search = getIndexed(player, args[0], args[1], args[2]);
-        Cuboid newArea = search.area.withArea(selection);
+        Area newArea = search.area.withArea(selection);
         search.areaList.set(search.index, newArea);
         search.areasFile.save(player.getWorld(), search.filename);
         player.sendMessage(text("Area " + search.toString() + " redefined: " + newArea, YELLOW));
@@ -266,15 +266,15 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
         if (areasFile == null) {
             throw new CommandWarn("Areas file not found: " + fileArg);
         }
-        List<Cuboid> areas = areasFile.areas.get(nameArg);
+        List<Area> areas = areasFile.areas.get(nameArg);
         if (areas == null) {
             throw new CommandWarn("Areas list not found: " + nameArg);
         }
         if (index < 0 || index >= areas.size()) {
             throw new CommandWarn("Index out of bounds: " + index + "/" + areas.size());
         }
-        Cuboid cuboid = areas.get(index);
-        Location location = cuboid.getCenter().toLocation(world);
+        Area cuboid = areas.get(index);
+        Location location = cuboid.getCenter().toBlock(world).getLocation().add(0.5, 0.0, 0.5);
         player.teleport(location, TeleportCause.COMMAND);
         player.sendMessage("Teleported to cuboid: " + world.getName() + "/" + fileArg + "/" + nameArg
                            + "[" + index + "]: " + cuboid);
@@ -291,7 +291,7 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
         if (areasFile.areas.containsKey(to)) {
             throw new CommandWarn("Area list already exists: " + world.getName() + "/" + fileArg + "/" + to);
         }
-        List<Cuboid> list = areasFile.areas.remove(from);
+        List<Area> list = areasFile.areas.remove(from);
         if (list == null) {
             throw new CommandWarn("Area list not found: " + world.getName() + "/" + fileArg + "/" + from);
         }
@@ -306,10 +306,10 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
         return true;
     }
 
-    protected Cuboid getSelection(Player player) {
-        Cuboid cuboid = WorldEdit.getSelection(player);
-        if (cuboid == null) throw new CommandWarn("WorldEdit selection required!");
-        return cuboid;
+    protected Area getSelection(Player player) {
+        Cuboid cuboid = Cuboid.requireSelectionOf(player);
+        Area area = new Area(cuboid.getMin(), cuboid.getMax());
+        return area;
     }
 
     @Value
@@ -318,9 +318,9 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
         protected final String filename;
         protected final AreasFile areasFile;
         protected final String name;
-        protected final List<Cuboid> areaList;
+        protected final List<Area> areaList;
         protected final int index;
-        protected final Cuboid area;
+        protected final Area area;
 
         public String toString() {
             return world + "/" + filename + "/" + name + "[" + index + "]";
@@ -339,14 +339,14 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
         if (areasFile == null) {
             throw new CommandWarn("Areas file not found: " + filename);
         }
-        List<Cuboid> areaList = areasFile.areas.get(nameArg);
+        List<Area> areaList = areasFile.areas.get(nameArg);
         if (areaList == null) {
             throw new CommandWarn("Areas list not found: " + nameArg);
         }
         if (index < 0 || index >= areaList.size()) {
             throw new CommandWarn("Index out of bounds: " + index + "/" + areaList.size());
         }
-        Cuboid area = areaList.get(index);
+        Area area = areaList.get(index);
         return new IndexedSearch(world.getName(), filename, areasFile, nameArg, areaList, index, area);
     }
 
@@ -379,10 +379,10 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
         if (args.length == 3) {
             AreasFile areasFile = AreasFile.load(context.player.getWorld(), args[0]);
             if (areasFile == null) return List.of();
-            List<Cuboid> list = areasFile.find(args[1]);
+            List<Area> list = areasFile.find(args[1]);
             if (list.isEmpty()) return List.of();
             Set<String> result = list.stream()
-                .map(Cuboid::getName)
+                .map(Area::getName)
                 .filter(Objects::nonNull)
                 .filter(s -> s.toLowerCase().contains(lower))
                 .collect(Collectors.toSet());
