@@ -1,5 +1,6 @@
 package com.cavetale.area.struct;
 
+import com.cavetale.core.command.CommandWarn;
 import com.cavetale.core.util.Json;
 import java.io.File;
 import java.util.ArrayList;
@@ -19,6 +20,14 @@ public final class AreasFile {
         if (!file.isFile()) return null;
         AreasFile areasFile = Json.load(file, AreasFile.class, () -> null);
         return areasFile;
+    }
+
+    public static AreasFile require(World world, String fileName) {
+        AreasFile result = load(world, fileName);
+        if (result == null) {
+            throw new CommandWarn("Areas file not found: " + world.getName() + "/" + fileName);
+        }
+        return result;
     }
 
     public void save(World world, String fileName) {

@@ -15,13 +15,15 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.Value;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
+import static net.kyori.adventure.text.Component.join;
+import static net.kyori.adventure.text.Component.text;
+import static net.kyori.adventure.text.JoinConfiguration.noSeparators;
+import static net.kyori.adventure.text.format.NamedTextColor.*;
 
 public final class AreaCommand extends AbstractCommand<AreaPlugin> {
     protected AreaCommand(final AreaPlugin plugin) {
@@ -66,9 +68,14 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
             .description("Teleport to area")
             .completer(this::fileAreaCompleter)
             .playerCaller(this::teleport);
+        rootNode.addChild("rename")
+            .arguments("<file> <name> <newname>")
+            .description("Rename an area")
+            .completer(this::fileAreaCompleter)
+            .playerCaller(this::rename);
     }
 
-    boolean add(Player player, String[] args) {
+    private boolean add(Player player, String[] args) {
         if (args.length != 2 && args.length != 3) return false;
         String fileArg = args[0];
         String nameArg = args[1];
@@ -83,7 +90,7 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
         return true;
     }
 
-    boolean list(Player player, String[] args) {
+    private boolean list(Player player, String[] args) {
         if (args.length > 3) return false;
         World world = player.getWorld();
         if (args.length == 0) {
@@ -96,8 +103,7 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
                     names.add(name.substring(0, name.length() - 5));
                 }
             }
-            player.sendMessage(Component.text(names.size() + " area files: " + String.join(", ", names),
-                                              NamedTextColor.YELLOW));
+            player.sendMessage(text(names.size() + " area files: " + String.join(", ", names), YELLOW));
             return true;
         }
         String fileArg = args[0];
@@ -110,8 +116,7 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
             for (Map.Entry<String, List<Cuboid>> entry : areasFile.areas.entrySet()) {
                 names.add(entry.getKey() + "(" + entry.getValue().size() + ")");
             }
-            player.sendMessage(Component.text(fileArg + ": " + names.size() + " area lists: " + String.join(", ", names),
-                                              NamedTextColor.YELLOW));
+            player.sendMessage(text(fileArg + ": " + names.size() + " area lists: " + String.join(", ", names), YELLOW));
             return true;
         }
         String nameArg = args[1];
@@ -146,7 +151,7 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
         return true;
     }
 
-    protected boolean here(Player player, String[] args) {
+    private boolean here(Player player, String[] args) {
         if (args.length != 1) return false;
         World world = player.getWorld();
         String filename = args[0];
@@ -159,15 +164,14 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
             String name = entry.getKey();
             for (Cuboid area : entry.getValue()) {
                 if (area.contains(player.getLocation())) {
-                    player.sendMessage(Component.text("- " + name + ": " + area,
-                                                      NamedTextColor.YELLOW));
+                    player.sendMessage(text("- " + name + ": " + area, YELLOW));
                 }
             }
         }
         return true;
     }
 
-    boolean highlight(Player player, String[] args) {
+    private boolean highlight(Player player, String[] args) {
         if (args.length < 1 || args.length > 3) return false;
         World world = player.getWorld();
         String fileArg = args[0];
@@ -192,17 +196,17 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
         if (list.isEmpty()) {
             throw new CommandWarn("Areas not found: " + path);
         }
-        player.sendMessage(Component.text("Highlighting " + list.size() + " areas:", NamedTextColor.YELLOW));
+        player.sendMessage(text("Highlighting " + list.size() + " areas:", YELLOW));
         Location location = player.getLocation();
         for (Cuboid cuboid : list) {
             if (!cuboid.outset(64).contains(location)) continue;
             cuboid.highlight(world, player);
-            player.sendMessage(Component.text("- " + cuboid, NamedTextColor.WHITE));
+            player.sendMessage(text("- " + cuboid, WHITE));
         }
         return true;
     }
 
-    boolean remove(Player player, String[] args) {
+    private boolean remove(Player player, String[] args) {
         if (args.length != 3) return false;
         World world = player.getWorld();
         String fileArg = args[0];
@@ -235,19 +239,18 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
         return true;
     }
 
-    boolean redefine(Player player, String[] args) {
+    private boolean redefine(Player player, String[] args) {
         if (args.length != 3) return false;
         Cuboid selection = getSelection(player);
         IndexedSearch search = getIndexed(player, args[0], args[1], args[2]);
         Cuboid newArea = search.area.withArea(selection);
         search.areaList.set(search.index, newArea);
         search.areasFile.save(player.getWorld(), search.filename);
-        player.sendMessage(Component.text("Area " + search.toString() + " redefined: " + newArea,
-                                          NamedTextColor.YELLOW));
+        player.sendMessage(text("Area " + search.toString() + " redefined: " + newArea, YELLOW));
         return true;
     }
 
-    boolean teleport(Player player, String[] args) {
+    private boolean teleport(Player player, String[] args) {
         if (args.length != 3) return false;
         World world = player.getWorld();
         String fileArg = args[0];
@@ -275,6 +278,31 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
         player.teleport(location, TeleportCause.COMMAND);
         player.sendMessage("Teleported to cuboid: " + world.getName() + "/" + fileArg + "/" + nameArg
                            + "[" + index + "]: " + cuboid);
+        return true;
+    }
+
+    private boolean rename(Player player, String[] args) {
+        if (args.length != 3) return false;
+        final String fileArg = args[0];
+        final String from = args[1];
+        final String to = args[2];
+        World world = player.getWorld();
+        AreasFile areasFile = AreasFile.require(world, fileArg);
+        if (areasFile.areas.containsKey(to)) {
+            throw new CommandWarn("Area list already exists: " + world.getName() + "/" + fileArg + "/" + to);
+        }
+        List<Cuboid> list = areasFile.areas.remove(from);
+        if (list == null) {
+            throw new CommandWarn("Area list not found: " + world.getName() + "/" + fileArg + "/" + from);
+        }
+        areasFile.areas.put(to, list);
+        areasFile.save(world, fileArg);
+        player.sendMessage(join(noSeparators(),
+                                text("List "),
+                                text(world.getName() + "/" + fileArg + "/" + from, YELLOW),
+                                text(" renamed to "),
+                                text(to, YELLOW))
+                           .color(AQUA));
         return true;
     }
 
@@ -322,7 +350,7 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
         return new IndexedSearch(world.getName(), filename, areasFile, nameArg, areaList, index, area);
     }
 
-    List<String> fileAreaCompleter(CommandContext context, CommandNode node, String[] args) {
+    private List<String> fileAreaCompleter(CommandContext context, CommandNode node, String[] args) {
         if (args.length == 0) return null;
         if (context.player == null) return null;
         String arg = args[args.length - 1];
