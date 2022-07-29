@@ -36,6 +36,11 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
             .description("Add an area")
             .completer(this::fileAreaCompleter)
             .playerCaller(this::add);
+        rootNode.addChild("addhere")
+            .arguments("<file> [subname]")
+            .description("Add an area to the named list here")
+            .completer(this::fileAreaCompleter)
+            .playerCaller(this::addhere);
         rootNode.addChild("remove")
             .arguments("<file> <name> <index>")
             .description("Remove area")
@@ -87,6 +92,32 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
         areasFile.areas.computeIfAbsent(nameArg, u -> new ArrayList<>()).add(cuboid);
         areasFile.save(world, fileArg);
         player.sendMessage("Area added to " + world.getName() + "/" + fileArg + "/" + nameArg + ": " + cuboid);
+        return true;
+    }
+
+    private boolean addhere(Player player, String[] args) {
+        if (args.length != 1 && args.length != 2) return false;
+        String fileArg = args[0];
+        String subnameArg = args.length >= 2 ? args[1] : null;
+        Area cuboid = getSelection(player).withName(subnameArg);
+        World world = player.getWorld();
+        AreasFile areasFile = AreasFile.load(world, fileArg);
+        if (areasFile == null) areasFile = new AreasFile();
+        Location location = player.getLocation();
+        String areaName = null;
+        for (Map.Entry<String, List<Area>> entry : areasFile.areas.entrySet()) {
+            Area mainArea = entry.getValue().get(0);
+            if (mainArea.contains(location)) {
+                areaName = entry.getKey();
+                entry.getValue().add(cuboid);
+                break;
+            }
+        }
+        if (areaName == null) {
+            throw new CommandWarn("There is no area list here");
+        }
+        areasFile.save(world, fileArg);
+        player.sendMessage("Area added to " + world.getName() + "/" + fileArg + "/" + areaName + ": " + cuboid);
         return true;
     }
 
