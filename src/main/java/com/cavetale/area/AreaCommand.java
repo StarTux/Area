@@ -11,11 +11,9 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.Value;
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
@@ -23,7 +21,9 @@ import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
 import static net.kyori.adventure.text.Component.join;
 import static net.kyori.adventure.text.Component.text;
 import static net.kyori.adventure.text.JoinConfiguration.noSeparators;
+import static net.kyori.adventure.text.JoinConfiguration.separator;
 import static net.kyori.adventure.text.format.NamedTextColor.*;
+import static net.kyori.adventure.text.format.TextDecoration.ITALIC;
 
 public final class AreaCommand extends AbstractCommand<AreaPlugin> {
     protected AreaCommand(final AreaPlugin plugin) {
@@ -32,12 +32,12 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
 
     protected void onEnable() {
         rootNode.addChild("add")
-            .arguments("<file> <name> [subname]")
+            .arguments("<file> <name> [index]")
             .description("Add an area")
             .completer(this::fileAreaCompleter)
             .playerCaller(this::add);
         rootNode.addChild("addhere")
-            .arguments("<file> [subname]")
+            .arguments("<file> [index]")
             .description("Add an area to the named list here")
             .completer(this::fileAreaCompleter)
             .playerCaller(this::addhere);
@@ -52,7 +52,7 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
             .completer(this::fileAreaCompleter)
             .playerCaller(this::redefine);
         rootNode.addChild("list")
-            .arguments("[file] [name] [subname]")
+            .arguments("[file] [name] [index]")
             .description("List areas")
             .completer(this::fileAreaCompleter)
             .playerCaller(this::list);
@@ -63,7 +63,7 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
             .playerCaller(this::here);
         rootNode.addChild("highlight")
             .alias("hl")
-            .arguments("[file] [name] [subname]")
+            .arguments("[file] [name] [index]")
             .description("Highlight areas")
             .completer(this::fileAreaCompleter)
             .playerCaller(this::highlight);
@@ -122,64 +122,75 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
     }
 
     private boolean list(Player player, String[] args) {
-        if (args.length > 3) return false;
-        World world = player.getWorld();
         if (args.length == 0) {
-            File folder = new File(world.getWorldFolder(), "areas");
-            if (!folder.isDirectory()) throw new CommandWarn("No areas to show!");
-            List<String> names = new ArrayList<>();
+            File folder = new File(player.getWorld().getWorldFolder(), "areas");
+            if (!folder.isDirectory()) {
+                throw new CommandWarn("Areas folder not found: " + player.getWorld().getWorldFolder());
+            }
+            List<Component> names = new ArrayList<>();
             for (File file : folder.listFiles()) {
+                if (!file.isFile()) continue;
                 String name = file.getName();
-                if (name.endsWith(".json")) {
-                    names.add(name.substring(0, name.length() - 5));
-                }
+                if (!name.endsWith(".json")) continue;
+                names.add(text(name.substring(0, name.length() - 5), YELLOW));
             }
-            player.sendMessage(text(names.size() + " area files: " + String.join(", ", names), YELLOW));
+            if (names.isEmpty()) {
+                throw new CommandWarn("No area files found: " + player.getWorld().getWorldFolder());
+            }
+            player.sendMessage(join(noSeparators(),
+                                    text(names.size() + " area files: ", GRAY),
+                                    join(separator(text(", ", DARK_GRAY)), names)));
             return true;
         }
-        String fileArg = args[0];
-        AreasFile areasFile = AreasFile.load(world, fileArg);
-        if (areasFile == null) {
-            throw new CommandWarn("No areas file found: " + fileArg);
-        }
-        if (args.length == 1) {
-            List<String> names = new ArrayList<>();
+        AreaArgument areaArgument = AreaArgument.of(player, args);
+        if (areaArgument == null) return true;
+        if (areaArgument.hasIndexArg()) {
+            // Print indexed/named areas
+            List<Area> areas = areaArgument.requireAreas();
+            player.sendMessage(join(noSeparators(),
+                                    text(areas.size() + " areas: ", AQUA),
+                                    text(areaArgument.getPath(), YELLOW)));
+            int index = 0;
+            for (Area area : areas) {
+                player.sendMessage(join(noSeparators(),
+                                        text((index++) + ") ", GRAY),
+                                        text(area.toString(), YELLOW)));
+            }
+            return true;
+        } else if (areaArgument.hasAreaListArg()) {
+            // Print named list
+            List<Area> areaList = areaArgument.requireAreaList();
+            player.sendMessage(join(noSeparators(),
+                                    text(areaList.size() + " areas: ", AQUA),
+                                    text(areaArgument.getPath(), YELLOW)));
+            int index = 0;
+            for (Area area : areaList) {
+                player.sendMessage(join(noSeparators(),
+                                        text((index++) + ") ", GRAY),
+                                        text(area.toString(), YELLOW)));
+            }
+            return true;
+        } else if (areaArgument.hasAreasFileArg()) {
+            // Print lists
+            AreasFile areasFile = areaArgument.requireAreasFile();
+            player.sendMessage(join(noSeparators(),
+                                    text(areasFile.areas.size() + " area lists: ", AQUA),
+                                    text(areaArgument.getPath(), YELLOW)));
             for (Map.Entry<String, List<Area>> entry : areasFile.areas.entrySet()) {
-                names.add(entry.getKey() + "(" + entry.getValue().size() + ")");
-            }
-            player.sendMessage(text(fileArg + ": " + names.size() + " area lists: " + String.join(", ", names), YELLOW));
-            return true;
-        }
-        String nameArg = args[1];
-        if (args.length == 2) {
-            String path = world.getName() + "/" + fileArg + "/" + nameArg;
-            List<Area> list = areasFile.areas.get(nameArg);
-            if (list == null) {
-                throw new CommandWarn("Area list not found: " + path);
-            }
-            player.sendMessage(ChatColor.YELLOW + path + ": " + list.size() + " areas");
-            int index = 0;
-            for (Area cuboid : list) {
-                player.sendMessage("" + ChatColor.YELLOW + index + ") " + ChatColor.WHITE + cuboid);
-                index += 1;
+                String name = entry.getKey();
+                List<Area> areaList = entry.getValue();
+                Area area = !areaList.isEmpty() ? areaList.get(0) : null;
+                player.sendMessage(join(noSeparators(),
+                                        text("." + name + " ", GRAY),
+                                        text("(" + areaList.size() + ") ", AQUA),
+                                        (area != null
+                                         ? text(area.toString(), YELLOW)
+                                         : text("null", DARK_GRAY, ITALIC))));
             }
             return true;
+        } else {
+            return false;
         }
-        String subnameArg = args[2];
-        if (args.length == 3) {
-            String path = world.getName() + "/" + fileArg + "/" + nameArg + "/" + subnameArg;
-            List<Area> list = areasFile.find(nameArg, subnameArg);
-            if (list.isEmpty()) {
-                throw new CommandWarn("Sublist not found: " + path);
-            }
-            player.sendMessage(ChatColor.YELLOW + path + ": " + list.size() + " areas");
-            int index = 0;
-            for (Area cuboid : list) {
-                player.sendMessage("" + ChatColor.YELLOW + index + ") " + ChatColor.WHITE + cuboid);
-                index += 1;
-            }
-        }
-        return true;
     }
 
     private boolean here(Player player, String[] args) {
@@ -203,36 +214,19 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
     }
 
     private boolean highlight(Player player, String[] args) {
-        if (args.length < 1 || args.length > 3) return false;
-        World world = player.getWorld();
-        String fileArg = args[0];
-        AreasFile areasFile = AreasFile.load(world, fileArg);
-        if (areasFile == null) {
-            throw new CommandWarn("No areas file found: " + fileArg);
-        }
-        final String path;
-        final List<Area> list;
-        if (args.length == 1) {
-            path = fileArg;
-            list = areasFile.all();
-        } else if (args.length == 2) {
-            path = fileArg + "/" + args[1];
-            list = areasFile.find(args[1]);
-        } else if (args.length == 3) {
-            path = fileArg + "/" + args[1] + "/" + args[2];
-            list = areasFile.find(args[1], args[2]);
-        } else {
-            throw new IllegalStateException();
-        }
-        if (list.isEmpty()) {
-            throw new CommandWarn("Areas not found: " + path);
-        }
-        player.sendMessage(text("Highlighting " + list.size() + " areas:", YELLOW));
+        AreaArgument areaArgument = AreaArgument.of(player, args);
+        if (areaArgument == null) return false;
+        List<Area> list = areaArgument.requireAnyAreas();
+        player.sendMessage(join(noSeparators(),
+                                text("Highlighting " + list.size() + " area(s):", GRAY),
+                                text(areaArgument.getPath(), AQUA)));
         Location location = player.getLocation();
-        for (Area cuboid : list) {
-            if (!cuboid.outset(64).contains(location)) continue;
-            cuboid.highlight(world, player);
-            player.sendMessage(text("- " + cuboid, WHITE));
+        for (Area area : list) {
+            if (!area.outset(64).contains(location)) continue;
+            area.highlight(player.getWorld(), player);
+            player.sendMessage(join(noSeparators(),
+                                    text("- ", GRAY),
+                                    text(area.toString(), YELLOW)));
         }
         return true;
     }
@@ -412,12 +406,20 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
             if (areasFile == null) return List.of();
             List<Area> list = areasFile.find(args[1]);
             if (list.isEmpty()) return List.of();
-            Set<String> result = list.stream()
-                .map(Area::getName)
-                .filter(Objects::nonNull)
-                .filter(s -> s.toLowerCase().contains(lower))
-                .collect(Collectors.toSet());
-            return List.copyOf(result);
+            List<String> result = new ArrayList<>(list.size());
+            for (int i = 0; i < list.size(); i += 1) {
+                String term = "" + i;
+                if (term.contains(lower)) {
+                    result.add(term);
+                }
+            }
+            for (Area area : list) {
+                String name = area.getName();
+                if (name != null && name.toLowerCase().contains(lower)) {
+                    result.add(area.getName());
+                }
+            }
+            return result;
         }
         return List.of();
     }
