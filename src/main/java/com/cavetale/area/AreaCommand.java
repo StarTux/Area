@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import lombok.Value;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -85,13 +84,13 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
         String fileArg = args[0];
         String nameArg = args[1];
         String subnameArg = args.length >= 3 ? args[2] : null;
-        Area cuboid = getSelection(player).withName(subnameArg);
+        Area area = getSelection(player).withName(subnameArg);
         World world = player.getWorld();
         AreasFile areasFile = AreasFile.load(world, fileArg);
         if (areasFile == null) areasFile = new AreasFile();
-        areasFile.areas.computeIfAbsent(nameArg, u -> new ArrayList<>()).add(cuboid);
+        areasFile.areas.computeIfAbsent(nameArg, u -> new ArrayList<>()).add(area);
         areasFile.save(world, fileArg);
-        player.sendMessage("Area added to " + world.getName() + "/" + fileArg + "/" + nameArg + ": " + cuboid);
+        player.sendMessage("Area added to " + world.getName() + "/" + fileArg + "/" + nameArg + ": " + area);
         return true;
     }
 
@@ -99,7 +98,7 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
         if (args.length != 1 && args.length != 2) return false;
         String fileArg = args[0];
         String subnameArg = args.length >= 2 ? args[1] : null;
-        Area cuboid = getSelection(player).withName(subnameArg);
+        Area area = getSelection(player).withName(subnameArg);
         World world = player.getWorld();
         AreasFile areasFile = AreasFile.load(world, fileArg);
         if (areasFile == null) areasFile = new AreasFile();
@@ -109,7 +108,7 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
             Area mainArea = entry.getValue().get(0);
             if (mainArea.contains(location)) {
                 areaName = entry.getKey();
-                entry.getValue().add(cuboid);
+                entry.getValue().add(area);
                 break;
             }
         }
@@ -117,7 +116,7 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
             throw new CommandWarn("There is no area list here");
         }
         areasFile.save(world, fileArg);
-        player.sendMessage("Area added to " + world.getName() + "/" + fileArg + "/" + areaName + ": " + cuboid);
+        player.sendMessage("Area added to " + world.getName() + "/" + fileArg + "/" + areaName + ": " + area);
         return true;
     }
 
@@ -218,8 +217,8 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
         if (areaArgument == null) return false;
         List<Area> list = areaArgument.requireAnyAreas();
         player.sendMessage(join(noSeparators(),
-                                text("Highlighting " + list.size() + " area(s):", GRAY),
-                                text(areaArgument.getPath(), AQUA)));
+                                text("Highlighting " + list.size() + " area(s): ", GRAY),
+                                text(areaArgument.getPath(), YELLOW)));
         Location location = player.getLocation();
         for (Area area : list) {
             if (!area.outset(64).contains(location)) continue;
@@ -254,55 +253,43 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
         if (index < 0 || index >= areas.size()) {
             throw new CommandWarn("Index out of bounds: " + index + "/" + areas.size());
         }
-        Area cuboid = areas.remove(index);
+        Area area = areas.remove(index);
         if (areas.isEmpty()) {
             areasFile.areas.remove(nameArg);
         }
         areasFile.save(world, fileArg);
         player.sendMessage("Area removed: " + world.getName() + "/" + fileArg + "/" + nameArg
-                           + "[" + index + "]: " + cuboid);
+                           + "[" + index + "]: " + area);
         return true;
     }
 
     private boolean redefine(Player player, String[] args) {
-        if (args.length != 3) return false;
+        AreaArgument areaArgument = AreaArgument.of(player, args);
+        if (areaArgument == null || !areaArgument.hasIndexArg()) return false;
+        Area area = areaArgument.requireSingleArea();
         Area selection = getSelection(player);
-        IndexedSearch search = getIndexed(player, args[0], args[1], args[2]);
-        Area newArea = search.area.withArea(selection);
-        search.areaList.set(search.index, newArea);
-        search.areasFile.save(player.getWorld(), search.filename);
-        player.sendMessage(text("Area " + search.toString() + " redefined: " + newArea, YELLOW));
+        Area newArea = area.withArea(selection);
+        List<Area> areaList = areaArgument.requireAreaList();
+        int index = areaList.indexOf(area);
+        areaList.set(index, newArea);
+        areaArgument.save();
+        player.sendMessage(join(noSeparators(),
+                                text("Redefined ", GRAY),
+                                text(areaArgument.getPath(), YELLOW),
+                                text(" => ", GRAY),
+                                text(newArea.toString(), YELLOW)));
         return true;
     }
 
     private boolean teleport(Player player, String[] args) {
-        if (args.length != 3) return false;
-        World world = player.getWorld();
-        String fileArg = args[0];
-        String nameArg = args[1];
-        String indexArg = args[2];
-        int index;
-        try {
-            index = Integer.parseInt(indexArg);
-        } catch (NumberFormatException nfe) {
-            throw new CommandWarn("Number expected: " + indexArg);
-        }
-        AreasFile areasFile = AreasFile.load(world, fileArg);
-        if (areasFile == null) {
-            throw new CommandWarn("Areas file not found: " + fileArg);
-        }
-        List<Area> areas = areasFile.areas.get(nameArg);
-        if (areas == null) {
-            throw new CommandWarn("Areas list not found: " + nameArg);
-        }
-        if (index < 0 || index >= areas.size()) {
-            throw new CommandWarn("Index out of bounds: " + index + "/" + areas.size());
-        }
-        Area cuboid = areas.get(index);
-        Location location = cuboid.getCenter().toBlock(world).getLocation().add(0.5, 0.0, 0.5);
+        AreaArgument areaArgument = AreaArgument.of(player, args);
+        if (areaArgument == null || !areaArgument.hasIndexArg()) return false;
+        Area area = areaArgument.requireSingleArea();
+        Location location = area.getCenter().toBlock(player.getWorld()).getLocation().add(0.5, 0.0, 0.5);
         player.teleport(location, TeleportCause.COMMAND);
-        player.sendMessage("Teleported to cuboid: " + world.getName() + "/" + fileArg + "/" + nameArg
-                           + "[" + index + "]: " + cuboid);
+        player.sendMessage(join(noSeparators(),
+                                text("Teleported to ", GRAY),
+                                text(areaArgument.getPath(), YELLOW)));
         return true;
     }
 
@@ -335,44 +322,6 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
         Cuboid cuboid = Cuboid.requireSelectionOf(player);
         Area area = new Area(cuboid.getMin(), cuboid.getMax());
         return area;
-    }
-
-    @Value
-    protected final class IndexedSearch {
-        protected final String world;
-        protected final String filename;
-        protected final AreasFile areasFile;
-        protected final String name;
-        protected final List<Area> areaList;
-        protected final int index;
-        protected final Area area;
-
-        public String toString() {
-            return world + "/" + filename + "/" + name + "[" + index + "]";
-        }
-    }
-
-    protected IndexedSearch getIndexed(Player player, String filename, String nameArg, String indexArg) {
-        World world = player.getWorld();
-        int index;
-        try {
-            index = Integer.parseInt(indexArg);
-        } catch (NumberFormatException nfe) {
-            throw new CommandWarn("Number expected: " + indexArg);
-        }
-        AreasFile areasFile = AreasFile.load(world, filename);
-        if (areasFile == null) {
-            throw new CommandWarn("Areas file not found: " + filename);
-        }
-        List<Area> areaList = areasFile.areas.get(nameArg);
-        if (areaList == null) {
-            throw new CommandWarn("Areas list not found: " + nameArg);
-        }
-        if (index < 0 || index >= areaList.size()) {
-            throw new CommandWarn("Index out of bounds: " + index + "/" + areaList.size());
-        }
-        Area area = areaList.get(index);
-        return new IndexedSearch(world.getName(), filename, areasFile, nameArg, areaList, index, area);
     }
 
     private List<String> fileAreaCompleter(CommandContext context, CommandNode node, String[] args) {
