@@ -5,8 +5,10 @@ import com.cavetale.area.struct.AreasFile;
 import com.cavetale.core.command.CommandWarn;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import lombok.Data;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 
@@ -26,6 +28,13 @@ public final class AreaArgument {
         if (args.length == 0 || args.length > 3) return null;
         AreaArgument result = new AreaArgument();
         result.parse(player, args);
+        return result;
+    }
+
+    public static AreaArgument at(Player player, String name) {
+        AreaArgument result = new AreaArgument();
+        result.parse(player, new String[] {name});
+        result.findAt(player.getLocation());
         return result;
     }
 
@@ -60,6 +69,16 @@ public final class AreaArgument {
                 if (indexArg.equals(it.getName())) {
                     areas.add(it);
                 }
+            }
+        }
+    }
+
+    private void findAt(Location location) {
+        for (Map.Entry<String, List<Area>> entry : areasFile.areas.entrySet()) {
+            if (entry.getValue().get(0).contains(location)) {
+                this.nameArg = entry.getKey();
+                this.areaList = entry.getValue();
+                return;
             }
         }
     }

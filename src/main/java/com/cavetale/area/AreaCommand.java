@@ -200,8 +200,8 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
 
     private boolean listHere(Player player, String[] args) {
         if (args.length != 1) return false;
-        AreaArgument areaArgument = AreaArgument.of(player, args);
-        if (areaArgument == null || !areaArgument.hasAreasFileArg()) return false;
+        AreaArgument areaArgument = AreaArgument.at(player, args[0]);
+        if (areaArgument == null) return false;
         List<Area> areaList = areaArgument.requireAreaList();
         player.sendMessage(join(noSeparators(),
                                 text(areaList.size() + " areas in ", GRAY),
