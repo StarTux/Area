@@ -55,6 +55,12 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
             .description("List areas")
             .completer(this::fileAreaCompleter)
             .playerCaller(this::list);
+        rootNode.addChild("listhere")
+            .alias("lshere")
+            .arguments("<file>")
+            .description("List subareas belonging to current area")
+            .completer(this::fileAreaCompleter)
+            .playerCaller(this::listHere);
         rootNode.addChild("here")
             .arguments("<file>")
             .description("List areas here")
@@ -190,6 +196,23 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
         } else {
             return false;
         }
+    }
+
+    private boolean listHere(Player player, String[] args) {
+        if (args.length != 1) return false;
+        AreaArgument areaArgument = AreaArgument.of(player, args);
+        if (areaArgument == null || !areaArgument.hasAreasFileArg()) return false;
+        List<Area> areaList = areaArgument.requireAreaList();
+        player.sendMessage(join(noSeparators(),
+                                text(areaList.size() + " areas in ", GRAY),
+                                text(areaArgument.getNameArg(), YELLOW)));
+        int index = 0;
+        for (Area area : areaList) {
+            player.sendMessage(join(noSeparators(),
+                                    text((index++) + ") ", GRAY),
+                                    text(area.toString(), YELLOW)));
+        }
+        return true;
     }
 
     private boolean here(Player player, String[] args) {
