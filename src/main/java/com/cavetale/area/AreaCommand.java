@@ -9,6 +9,7 @@ import com.cavetale.core.command.CommandWarn;
 import com.cavetale.core.struct.Cuboid;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -323,8 +324,8 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
 
     private boolean rename(Player player, String[] args) {
         if (args.length != 4) return false;
-        AreaArgument areaArgument = AreaArgument.of(player, args);
-        if (areaArgument == null || !areaArgument.hasIndexArg()) return false;
+        AreaArgument areaArgument = AreaArgument.of(player, Arrays.copyOfRange(args, 0, 3));
+        if (areaArgument == null) return false;
         areaArgument.requireNumberIndex();
         final String newName = args[3];
         areaArgument.requireAreaList().set(areaArgument.getIndex(), areaArgument.requireSingleArea().withName(newName));
