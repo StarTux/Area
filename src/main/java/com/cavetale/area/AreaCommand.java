@@ -79,10 +79,15 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
             .completer(this::fileAreaCompleter)
             .playerCaller(this::teleport);
         rootNode.addChild("rename")
-            .arguments("<file> <name> <newname>")
+            .arguments("<file> <name> <index> <newname>")
             .description("Rename an area")
             .completer(this::fileAreaCompleter)
             .playerCaller(this::rename);
+        rootNode.addChild("renamelist")
+            .arguments("<file> <name> <newname>")
+            .description("Rename an area list")
+            .completer(this::fileAreaCompleter)
+            .playerCaller(this::renameList);
     }
 
     private boolean add(Player player, String[] args) {
@@ -317,6 +322,20 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
     }
 
     private boolean rename(Player player, String[] args) {
+        if (args.length != 4) return false;
+        AreaArgument areaArgument = AreaArgument.of(player, args);
+        if (areaArgument == null || !areaArgument.hasIndexArg()) return false;
+        areaArgument.requireNumberIndex();
+        final String newName = args[3];
+        areaArgument.requireAreaList().set(areaArgument.getIndex(), areaArgument.requireSingleArea().withName(newName));
+        areaArgument.save();
+        player.sendMessage(join(noSeparators(),
+                                text("Renamed ", GRAY),
+                                text(areaArgument.getPath(), YELLOW)));
+        return true;
+    }
+
+    private boolean renameList(Player player, String[] args) {
         if (args.length != 3) return false;
         final String fileArg = args[0];
         final String from = args[1];
