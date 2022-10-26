@@ -232,9 +232,14 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
         Location location = player.getLocation();
         for (Map.Entry<String, List<Area>> entry : areasFile.areas.entrySet()) {
             String name = entry.getKey();
+            int i = 0;
             for (Area area : entry.getValue()) {
+                int index = i++;
                 if (area.contains(player.getLocation())) {
-                    player.sendMessage(text("- " + name + ": " + area, YELLOW));
+                    player.sendMessage(join(noSeparators(),
+                                            text(name, GOLD),
+                                            text(" " + index + ") ", GRAY),
+                                            text(area.toString(), YELLOW)));
                 }
             }
         }
