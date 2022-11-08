@@ -56,14 +56,12 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
             .description("List areas")
             .completer(this::fileAreaCompleter)
             .playerCaller(this::list);
-        rootNode.addChild("listhere")
+        rootNode.addChild("listhere").arguments("<file>")
             .alias("lshere")
-            .arguments("<file>")
             .description("List subareas belonging to current area")
             .completer(this::fileAreaCompleter)
             .playerCaller(this::listHere);
-        rootNode.addChild("here")
-            .arguments("<file>")
+        rootNode.addChild("here").arguments("<file>")
             .description("List areas here")
             .completer(this::fileAreaCompleter)
             .playerCaller(this::here);
@@ -73,6 +71,11 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
             .description("Highlight areas")
             .completer(this::fileAreaCompleter)
             .playerCaller(this::highlight);
+        rootNode.addChild("highlighthere").arguments("<file>")
+            .alias("hlhere")
+            .description("Highlight subareas belonging to current area")
+            .completer(this::fileAreaCompleter)
+            .playerCaller(this::highlightHere);
         rootNode.addChild("teleport")
             .alias("tp")
             .arguments("<file> <name> <index>")
@@ -255,11 +258,31 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
                                 text(areaArgument.getPath(), YELLOW)));
         Location location = player.getLocation();
         for (Area area : list) {
-            if (!area.outset(64).contains(location)) continue;
-            area.highlight(player.getWorld(), player);
             player.sendMessage(join(noSeparators(),
                                     text("- ", GRAY),
                                     text(area.toString(), YELLOW)));
+            if (!area.outset(64).contains(location)) continue;
+            area.highlight(player.getWorld(), player);
+        }
+        return true;
+    }
+
+    private boolean highlightHere(Player player, String[] args) {
+        if (args.length != 1) return false;
+        AreaArgument areaArgument = AreaArgument.at(player, args[0]);
+        if (areaArgument == null) return false;
+        List<Area> areaList = areaArgument.requireAreaList();
+        player.sendMessage(join(noSeparators(),
+                                text(areaList.size() + " areas in ", GRAY),
+                                text(areaArgument.getNameArg(), YELLOW)));
+        int index = 0;
+        Location location = player.getLocation();
+        for (Area area : areaList) {
+            player.sendMessage(join(noSeparators(),
+                                    text((index++) + ") ", GRAY),
+                                    text(area.toString(), YELLOW)));
+            if (!area.outset(64).contains(location)) continue;
+            area.highlight(player.getWorld(), player);
         }
         return true;
     }
