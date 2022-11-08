@@ -38,6 +38,15 @@ public final class AreaArgument {
         return result;
     }
 
+    public static AreaArgument at(Player player, AreasFile areasFile) {
+        AreaArgument result = new AreaArgument();
+        result.worldName = areasFile.getWorldName();
+        result.fileArg = areasFile.getFileName();
+        result.areasFile = areasFile;
+        result.findAt(player.getLocation());
+        return result;
+    }
+
     private void parse(Player player, String[] args) {
         World world = player.getWorld();
         this.worldName = world.getName();
@@ -74,6 +83,7 @@ public final class AreaArgument {
     }
 
     private void findAt(Location location) {
+        if (areasFile == null) return;
         for (Map.Entry<String, List<Area>> entry : areasFile.areas.entrySet()) {
             if (entry.getValue().get(0).contains(location)) {
                 this.nameArg = entry.getKey();

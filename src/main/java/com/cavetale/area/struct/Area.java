@@ -74,6 +74,7 @@ public final class Area {
             + (min.equals(max)
                ? "(" + min + ")"
                : "(" + min + "|" + max + ")")
+            + " [" + getVolume() + "]"
             + (raw != null
                ? Json.serialize(raw)
                : "");

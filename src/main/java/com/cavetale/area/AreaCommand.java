@@ -20,6 +20,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
 import static net.kyori.adventure.text.Component.join;
 import static net.kyori.adventure.text.Component.text;
+import static net.kyori.adventure.text.Component.textOfChildren;
 import static net.kyori.adventure.text.JoinConfiguration.noSeparators;
 import static net.kyori.adventure.text.JoinConfiguration.separator;
 import static net.kyori.adventure.text.format.NamedTextColor.*;
@@ -31,64 +32,55 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
     }
 
     protected void onEnable() {
-        rootNode.addChild("add")
-            .arguments("<file> <name> [index]")
+        rootNode.addChild("add").arguments("<file> <name> [index]")
             .description("Add an area")
             .completer(this::fileAreaCompleter)
             .playerCaller(this::add);
-        rootNode.addChild("addhere")
-            .arguments("<file> [index]")
+        rootNode.addChild("addhere").arguments("[file] [index]")
             .description("Add an area to the named list here")
             .completer(this::fileAreaCompleter)
             .playerCaller(this::addhere);
-        rootNode.addChild("remove")
-            .arguments("<file> <name> <index>")
+        rootNode.addChild("remove").arguments("<file> <name> <index>")
             .description("Remove area")
             .completer(this::fileAreaCompleter)
             .playerCaller(this::remove);
-        rootNode.addChild("redefine")
-            .arguments("<file> <name> <index>")
+        rootNode.addChild("redefine").arguments("<file> <name> <index>")
             .description("Redefine area")
             .completer(this::fileAreaCompleter)
             .playerCaller(this::redefine);
-        rootNode.addChild("list")
-            .arguments("[file] [name] [index]")
+        rootNode.addChild("list").arguments("[file] [name] [index]")
             .description("List areas")
             .completer(this::fileAreaCompleter)
             .playerCaller(this::list);
-        rootNode.addChild("listhere").arguments("<file>")
+        rootNode.addChild("listhere").arguments("[file]")
             .alias("lshere")
             .description("List subareas belonging to current area")
             .completer(this::fileAreaCompleter)
             .playerCaller(this::listHere);
-        rootNode.addChild("here").arguments("<file>")
+        rootNode.addChild("here").arguments("[file]")
             .description("List areas here")
             .completer(this::fileAreaCompleter)
             .playerCaller(this::here);
         rootNode.addChild("highlight")
-            .alias("hl")
-            .arguments("[file] [name] [index]")
+            .alias("hl").arguments("[file] [name] [index]")
             .description("Highlight areas")
             .completer(this::fileAreaCompleter)
             .playerCaller(this::highlight);
-        rootNode.addChild("highlighthere").arguments("<file>")
+        rootNode.addChild("highlighthere").arguments("[file]")
             .alias("hlhere")
             .description("Highlight subareas belonging to current area")
             .completer(this::fileAreaCompleter)
             .playerCaller(this::highlightHere);
         rootNode.addChild("teleport")
-            .alias("tp")
-            .arguments("<file> <name> <index>")
+            .alias("tp").arguments("<file> <name> <index>")
             .description("Teleport to area")
             .completer(this::fileAreaCompleter)
             .playerCaller(this::teleport);
-        rootNode.addChild("rename")
-            .arguments("<file> <name> <index> <newname>")
+        rootNode.addChild("rename").arguments("<file> <name> <index> <newname>")
             .description("Rename an area")
             .completer(this::fileAreaCompleter)
             .playerCaller(this::rename);
-        rootNode.addChild("renamelist")
-            .arguments("<file> <name> <newname>")
+        rootNode.addChild("renamelist").arguments("<file> <name> <newname>")
             .description("Rename an area list")
             .completer(this::fileAreaCompleter)
             .playerCaller(this::renameList);
@@ -105,17 +97,20 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
         if (areasFile == null) areasFile = new AreasFile();
         areasFile.areas.computeIfAbsent(nameArg, u -> new ArrayList<>()).add(area);
         areasFile.save(world, fileArg);
-        player.sendMessage("Area added to " + world.getName() + "/" + fileArg + "/" + nameArg + ": " + area);
+        player.sendMessage(textOfChildren(text("Area added to ", GRAY),
+                                          text(areasFile.getPath() + "/" + nameArg),
+                                          text(": ", GRAY),
+                                          text(area.toString(), YELLOW)));
         return true;
     }
 
     private boolean addhere(Player player, String[] args) {
-        if (args.length != 1 && args.length != 2) return false;
-        String fileArg = args[0];
+        if (args.length != 0 && args.length != 1 && args.length != 2) return false;
+        String fileArg = args.length >= 1 ? args[0] : null;
         String subnameArg = args.length >= 2 ? args[1] : null;
         Area area = getSelection(player).withName(subnameArg);
         World world = player.getWorld();
-        AreasFile areasFile = AreasFile.load(world, fileArg);
+        AreasFile areasFile = fileArg != null ? AreasFile.require(world, args[0]) : AreasFile.requireSingular(world);
         if (areasFile == null) areasFile = new AreasFile();
         Location location = player.getLocation();
         String areaName = null;
@@ -130,8 +125,11 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
         if (areaName == null) {
             throw new CommandWarn("There is no area list here");
         }
-        areasFile.save(world, fileArg);
-        player.sendMessage("Area added to " + world.getName() + "/" + fileArg + "/" + areaName + ": " + area);
+        areasFile.save(world, areasFile.getFileName());
+        player.sendMessage(textOfChildren(text("Area added to ", GRAY),
+                                          text(areasFile.getPath() + "/" + areaName, YELLOW),
+                                          text(": ", GRAY),
+                                          text(area.toString(), YELLOW)));
         return true;
     }
 
@@ -208,8 +206,10 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
     }
 
     private boolean listHere(Player player, String[] args) {
-        if (args.length != 1) return false;
-        AreaArgument areaArgument = AreaArgument.at(player, args[0]);
+        if (args.length != 0 && args.length != 1) return false;
+        AreaArgument areaArgument = args.length >= 1
+            ? AreaArgument.at(player, args[0])
+            : AreaArgument.at(player, AreasFile.requireSingular(player.getWorld()));
         if (areaArgument == null) return false;
         List<Area> areaList = areaArgument.requireAreaList();
         player.sendMessage(join(noSeparators(),
@@ -225,14 +225,11 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
     }
 
     private boolean here(Player player, String[] args) {
-        if (args.length != 1) return false;
+        if (args.length != 0 && args.length != 1) return false;
         World world = player.getWorld();
-        String filename = args[0];
-        AreasFile areasFile = AreasFile.load(world, filename);
-        if (areasFile == null) {
-            throw new CommandWarn("File not found: " + world.getName() + "/" + filename);
-        }
+        AreasFile areasFile = args.length >= 1 ? AreasFile.require(world, args[0]) : AreasFile.requireSingular(world);
         Location location = player.getLocation();
+        player.sendMessage(textOfChildren(text("Areas here in ", GRAY), text(areasFile.getPath(), YELLOW)));
         for (Map.Entry<String, List<Area>> entry : areasFile.areas.entrySet()) {
             String name = entry.getKey();
             int i = 0;
@@ -268,8 +265,10 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
     }
 
     private boolean highlightHere(Player player, String[] args) {
-        if (args.length != 1) return false;
-        AreaArgument areaArgument = AreaArgument.at(player, args[0]);
+        if (args.length != 0 && args.length != 1) return false;
+        AreaArgument areaArgument = args.length >= 1
+            ? AreaArgument.at(player, args[0])
+            : AreaArgument.at(player, AreasFile.requireSingular(player.getWorld()));
         if (areaArgument == null) return false;
         List<Area> areaList = areaArgument.requireAreaList();
         player.sendMessage(join(noSeparators(),
@@ -315,8 +314,10 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
             areasFile.areas.remove(nameArg);
         }
         areasFile.save(world, fileArg);
-        player.sendMessage("Area removed: " + world.getName() + "/" + fileArg + "/" + nameArg
-                           + "[" + index + "]: " + area);
+        player.sendMessage(textOfChildren(text("Area removed: ", GRAY),
+                                          text(areasFile.getPath() + "/" + nameArg + "[" + index + "]", YELLOW),
+                                          text(": ", GRAY),
+                                          text(area.toString(), YELLOW)));
         return true;
     }
 

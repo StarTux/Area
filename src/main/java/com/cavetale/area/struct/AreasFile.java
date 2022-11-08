@@ -8,10 +8,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import lombok.Getter;
 import org.bukkit.World;
 
+@Getter
 public final class AreasFile {
     public final Map<String, List<Area>> areas = new HashMap<>();
+    private transient String worldName;
+    private transient String fileName;
 
     public static AreasFile load(World world, String fileName) {
         File folder = new File(world.getWorldFolder(), "areas");
@@ -19,6 +23,8 @@ public final class AreasFile {
         File file = new File(folder, fileName + ".json");
         if (!file.isFile()) return null;
         AreasFile areasFile = Json.load(file, AreasFile.class, () -> null);
+        areasFile.worldName = world.getName();
+        areasFile.fileName = fileName;
         return areasFile;
     }
 
@@ -30,10 +36,32 @@ public final class AreasFile {
         return result;
     }
 
-    public void save(World world, String fileName) {
+    public static AreasFile requireSingular(World world) {
+        File folder = new File(world.getWorldFolder(), "areas");
+        if (!folder.isDirectory()) {
+            throw new CommandWarn("There is no areas folder: " + world.getName());
+        }
+        File[] files = folder.listFiles(f -> f.isFile() && f.getName().endsWith(".json"));
+        if (files.length != 1) {
+            if (!folder.isDirectory()) throw new CommandWarn("There is no single areas file: " + world.getName());
+        }
+        File file = files[0];
+        String fileName = file.getName();
+        fileName = fileName.substring(0, fileName.length() - 5);
+        if (!file.isFile()) return null;
+        AreasFile result = Json.load(file, AreasFile.class, () -> null);
+        if (result == null) {
+            throw new CommandWarn("Failed to load single areas file: " + world.getName() + "/" + fileName);
+        }
+        result.worldName = world.getName();
+        result.fileName = fileName;
+        return result;
+    }
+
+    public void save(World world, String theFileName) {
         File folder = new File(world.getWorldFolder(), "areas");
         folder.mkdirs();
-        File file = new File(folder, fileName + ".json");
+        File file = new File(folder, theFileName + ".json");
         Json.save(file, this, true);
     }
 
@@ -60,5 +88,9 @@ public final class AreasFile {
             }
         }
         return result;
+    }
+
+    public String getPath() {
+        return worldName + "/" + fileName;
     }
 }
