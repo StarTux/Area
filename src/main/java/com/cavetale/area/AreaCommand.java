@@ -32,14 +32,18 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
     }
 
     protected void onEnable() {
-        rootNode.addChild("add").arguments("<file> <name> [index]")
+        rootNode.addChild("add").arguments("<file> <name> [subname]")
             .description("Add an area")
             .completer(this::fileAreaCompleter)
             .playerCaller(this::add);
-        rootNode.addChild("addhere").arguments("[file] [index]")
+        rootNode.addChild("addhere").arguments("[file] [subname]")
             .description("Add an area to the named list here")
             .completer(this::fileAreaCompleter)
             .playerCaller(this::addhere);
+        rootNode.addChild("addslice").arguments("<file> <name> [subname]")
+            .description("Add an top-to-bottom area")
+            .completer(this::fileAreaCompleter)
+            .playerCaller(this::addSlice);
         rootNode.addChild("remove").arguments("<file> <name> <index>")
             .description("Remove area")
             .completer(this::fileAreaCompleter)
@@ -128,6 +132,38 @@ public final class AreaCommand extends AbstractCommand<AreaPlugin> {
         areasFile.save(world, areasFile.getFileName());
         player.sendMessage(textOfChildren(text("Area added to ", GRAY),
                                           text(areasFile.getPath() + "/" + areaName, YELLOW),
+                                          text(": ", GRAY),
+                                          text(area.toString(), YELLOW)));
+        return true;
+    }
+
+    private boolean addSlice(Player player, String[] args) {
+        if (args.length != 2 && args.length != 3) return false;
+        String fileArg = args[0];
+        String nameArg = args[1];
+        String subnameArg = args.length >= 3 ? args[2] : null;
+        World world = player.getWorld();
+        Cuboid cuboid = Cuboid.requireSelectionOf(player);
+        cuboid = new Cuboid(cuboid.ax, world.getMinHeight(), cuboid.az,
+                            cuboid.bx, world.getMaxHeight(), cuboid.bz);
+        AreasFile areasFile = AreasFile.load(world, fileArg);
+        if (areasFile == null) areasFile = new AreasFile();
+        if (areasFile.areas.containsKey(nameArg)) {
+            throw new CommandWarn("Already exists: " + nameArg);
+        }
+        for (String oldName : areasFile.areas.keySet()) {
+            List<Area> oldList = areasFile.areas.get(oldName);
+            if (oldList.get(0).toCuboid().overlaps(cuboid)) {
+                throw new CommandWarn("Slice would overlap with " + oldName + ": " + oldList.get(0));
+            }
+        }
+        final List<Area> list = new ArrayList<>();
+        final Area area = new Area(cuboid.getMin(), cuboid.getMax());
+        list.add(area);
+        areasFile.areas.put(nameArg, list);
+        areasFile.save(world, fileArg);
+        player.sendMessage(textOfChildren(text("Slice added ", GRAY),
+                                          text(areasFile.getPath() + "/" + nameArg),
                                           text(": ", GRAY),
                                           text(area.toString(), YELLOW)));
         return true;
