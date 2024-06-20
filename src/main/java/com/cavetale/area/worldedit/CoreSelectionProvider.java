@@ -14,18 +14,23 @@ import org.bukkit.entity.Player;
 public final class CoreSelectionProvider implements SelectionProvider {
     @Override
     public Cuboid getCuboidSelection(Player player) {
-        WorldEditPlugin we = (WorldEditPlugin) Bukkit.getServer().getPluginManager().getPlugin("WorldEdit");
-        LocalSession session = we.getSession(player);
-        World world = session.getSelectionWorld();
+        if (!Bukkit.getPluginManager().isPluginEnabled("WorldEdit")) {
+            return null;
+        }
+        final WorldEditPlugin we = (WorldEditPlugin) Bukkit.getPluginManager().getPlugin("WorldEdit");
+        final LocalSession session = we.getSession(player);
+        final World world = session.getSelectionWorld();
         final Region region;
         try {
             region = session.getSelection(world);
         } catch (Exception e) {
             return null;
         }
-        if (!(region instanceof CuboidRegion cuboidRegion)) return null;
-        BlockVector3 min = cuboidRegion.getMinimumPoint();
-        BlockVector3 max = cuboidRegion.getMaximumPoint();
+        if (!(region instanceof CuboidRegion cuboidRegion)) {
+            return null;
+        }
+        final BlockVector3 min = cuboidRegion.getMinimumPoint();
+        final BlockVector3 max = cuboidRegion.getMaximumPoint();
         return new Cuboid(min.getBlockX(), min.getBlockY(), min.getBlockZ(),
                           max.getBlockX(), max.getBlockY(), max.getBlockZ());
     }
